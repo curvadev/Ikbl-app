@@ -1,0 +1,47 @@
+plugins {
+    alias(libs.plugins.android.application)
+    // Plugin Kotlin dan Compose dihapus karena kita menggunakan Java Murni
+}
+
+android {
+    namespace "com.ikbladmin"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.ikbladmin"
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    
+    // Blok buildFeatures { compose true } dan kotlinOptions telah dihapus
+}
+
+dependencies {
+    // 1. Library Standar UI Android
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+
+    // 2. LIBRARY GOOGLE CODE SCANNER (Pengganti ZXing)
+    implementation 'com.google.android.gms:play-services-code-scanner:16.1.0'
+
+    // 3. Testing bawaan
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+}
+
