@@ -30,6 +30,7 @@
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
+        <package android:name="com.whatsapp" />
     </queries>
 
     <application
