@@ -1,0 +1,82 @@
+name: Build & Sign Android IKBL (APK & AAB)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+# Izin agar GitHub boleh menyimpan file kunci (.jks) ke repositori
+permissions:
+  contents: write
+
+env:
+  KS_FILE: ikbl-release.jks
+  KS_PASS: ikbl123
+  KEY_ALIAS: ikbl
+  KEY_PASS: ikbl123
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Java JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Buka Izin Eksekusi Gradlew
+      run: chmod +x gradlew
+
+    - name: Otomatis Buat & Simpan Keystore Permanen ke GitHub
+      run: |
+        if [ ! -f "$KS_FILE" ]; then
+          echo "Kunci permanen belum ada. Membuat kunci baru dan menyimpan ke GitHub..."
+          keytool -genkeypair -v -keystore "$KS_FILE" -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias "$KEY_ALIAS" -storepass "$KS_PASS" -keypass "$KEY_PASS" \
+            -dname "CN=IKBL, OU=IKBL, O=IKBL, L=Lamongan, ST=Jawa Timur, C=ID"
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f "$KS_FILE"
+          git commit -m "Otomatis menyimpan kunci permanen (Keystore) [skip ci]"
+          git push
+        else
+          echo "Kunci permanen sudah ada! Melanjutkan proses update aplikasi..."
+        fi
+
+    - name: Rakit APK & AAB Versi Release
+      run: ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace
+
+    - name: Beri Tanda Tangan (Sign) pada file APK
+      run: |
+        BUILD_TOOLS=$(ls -1d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+        APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+        echo "APK sumber: $APK"
+        $BUILD_TOOLS/zipalign -f -p 4 "$APK" aligned.apk
+        $BUILD_TOOLS/apksigner sign --ks "$KS_FILE" --ks-key-alias "$KEY_ALIAS" \
+          --ks-pass pass:"$KS_PASS" --key-pass pass:"$KEY_PASS" \
+          --out IKBL-Final.apk aligned.apk
+        $BUILD_TOOLS/apksigner verify --print-certs IKBL-Final.apk
+
+    - name: Beri Tanda Tangan (Sign) pada file AAB
+      run: |
+        AAB=$(find app/build/outputs/bundle/release -name "*.aab" | head -1)
+        cp "$AAB" IKBL-Final.aab
+        jarsigner -sigalg SHA256withRSA -digestalg SHA-256 \
+          -keystore "$KS_FILE" -storepass "$KS_PASS" -keypass "$KEY_PASS" \
+          IKBL-Final.aab "$KEY_ALIAS"
+        jarsigner -verify IKBL-Final.aab
+
+    - name: Simpan Hasil Akhir (APK & AAB)
+      uses: actions/upload-artifact@v4
+      with:
+        name: IKBL-Release-Files
+        path: |
+          IKBL-Final.apk
+          IKBL-Final.aab
