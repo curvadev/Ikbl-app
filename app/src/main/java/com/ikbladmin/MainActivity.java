@@ -178,6 +178,31 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+
+        // =====================================
+        // BAGIKAN TEKS (UNDANGAN) KE WHATSAPP
+        // =====================================
+        @JavascriptInterface
+        public void shareText(String text) {
+            ((AppCompatActivity) mContext).runOnUiThread(() -> {
+                try {
+                    Intent wa = new Intent(Intent.ACTION_SEND);
+                    wa.setType("text/plain");
+                    wa.putExtra(Intent.EXTRA_TEXT, text);
+                    wa.setPackage("com.whatsapp");
+                    mContext.startActivity(wa);
+                } catch (Exception e) {
+                    try {
+                        Intent send = new Intent(Intent.ACTION_SEND);
+                        send.setType("text/plain");
+                        send.putExtra(Intent.EXTRA_TEXT, text);
+                        mContext.startActivity(Intent.createChooser(send, "Bagikan undangan"));
+                    } catch (Exception e2) {
+                        Toast.makeText(mContext, "Tidak ada aplikasi untuk berbagi.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
